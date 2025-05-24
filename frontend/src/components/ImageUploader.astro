@@ -1,11 +1,22 @@
 <link rel="stylesheet" href="/src/components/ImageUploader.css" />
 <script type="module" src="/src/components/ImageUploader.js"></script>
 
+<!-- Upload section -->
+
 <div class="upload-container">
   <h2>Upload a cattle brand</h2>
   <form id="upload-form">
     <input type="file" id="image-input" name="image" accept="image/*" />
     <div id="preview-container" class="preview"></div>
-    <button type="submit">Enviar</button>
+    <button type="submit">Submit</button>
   </form>
+</div>
+
+<!-- Result section -->
+
+<div class="results-container" id="results-container">
+  <h3>Results</h3>
+  <ul id="results-list">
+    <!-- Results will be inserted here -->
+  </ul>
 </div>

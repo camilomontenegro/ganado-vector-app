@@ -32,3 +32,27 @@ button {
 button:hover {
   background-color: #45a049;
 }
+
+.results-container {
+  max-width: 600px;
+  margin: 2rem auto;
+  padding: 1rem;
+  border: 1px dashed #ccc;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+.results-container h3 {
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+}
+
+#results-list {
+  list-style-type: none;
+  padding: 0;
+}
+
+#results-list li {
+  padding: 0.5rem;
+  border-bottom: 1px solid #ddd;
+}
