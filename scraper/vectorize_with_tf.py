@@ -7,14 +7,17 @@ import tensorflow as tf
 from tensorflow.keras.applications import MobileNetV2
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from tensorflow.keras.preprocessing import image as keras_image
-from chromadb import Client
-from chromadb.config import Settings
+from chromadb import PersistentClient
 
 # Load MobileNetV2 (no top layer)
 model = MobileNetV2(weights='imagenet', include_top=False, pooling='avg')
 
 # Initialize ChromaDB
-chroma_client = Client(Settings(anonymized_telemetry=False))
+#chroma_client = Client(Settings(anonymized_telemetry=False))
+#collection = chroma_client.get_or_create_collection(name="cattle_brands_tf")
+
+# Use persistent storage for ChromaDB
+chroma_client = PersistentClient(path="chroma_db")
 collection = chroma_client.get_or_create_collection(name="cattle_brands_tf")
 
 # Input folder
