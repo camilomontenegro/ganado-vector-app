@@ -1,6 +1,4 @@
-import os
 import numpy as np
-from PIL import Image
 from pathlib import Path
 from tqdm import tqdm
 import tensorflow as tf
@@ -9,22 +7,29 @@ from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 from tensorflow.keras.preprocessing import image as keras_image
 from chromadb import PersistentClient
 
-# Load MobileNetV2 (no top layer)
+# Load MobileNetV2 model (no top layer)
 model = MobileNetV2(weights='imagenet', include_top=False, pooling='avg')
 
-# Initialize ChromaDB
-#chroma_client = Client(Settings(anonymized_telemetry=False))
-#collection = chroma_client.get_or_create_collection(name="cattle_brands_tf")
+# Connect to persistent ChromaDB
+client = PersistentClient(path="chroma_db")
+collection_name = "cattle_brands_tf"
 
-# Use persistent storage for ChromaDB
-chroma_client = PersistentClient(path="chroma_db")
-collection = chroma_client.get_or_create_collection(name="cattle_brands_tf")
+# Optional: Delete existing collection (clean start)
+try:
+    client.delete_collection(collection_name)
+    print("🧹 Existing collection deleted.")
+except Exception as e:
+    print(f"⚠️ Could not delete collection: {e}")
 
-# Input folder
-IMAGE_FOLDER = Path("normalized")
+# Re-create collection
+collection = client.get_or_create_collection(name=collection_name)
+
+# Folder with normalized images
+IMAGE_FOLDER = Path("scraper/normalized")
 images = list(IMAGE_FOLDER.glob("*.jpg"))
 
 print(f"📦 Vectorizing {len(images)} images...")
+added = 0
 
 for img_path in tqdm(images):
     try:
@@ -34,14 +39,17 @@ for img_path in tqdm(images):
         x = np.expand_dims(x, axis=0)
         x = preprocess_input(x)
 
-        # Generate embedding
+        # Get embedding
         embedding = model.predict(x, verbose=0)[0]
 
-        # Store in Chroma
+        # Store in ChromaDB
         collection.add(
             ids=[img_path.stem],
             embeddings=[embedding.tolist()],
             metadatas=[{"filename": img_path.name}]
         )
+        added += 1
     except Exception as e:
         print(f"❌ Error with {img_path.name}: {e}")
+
+print(f"✅ Added {added} embeddings to ChromaDB.")
