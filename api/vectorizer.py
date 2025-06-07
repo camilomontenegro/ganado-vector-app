@@ -18,4 +18,5 @@ def get_image_embedding(file) -> np.ndarray:
     x = preprocess_input(x)
 
     embedding = model.predict(x, verbose=0)[0]
+    embedding = embedding / np.linalg.norm(embedding)
     return embedding

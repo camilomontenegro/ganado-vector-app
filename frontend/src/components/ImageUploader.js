@@ -1,41 +1,62 @@
 document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('upload-form');
   const imageInput = document.getElementById('image-input');
   const previewContainer = document.getElementById('preview-container');
-  const uploadForm = document.getElementById('upload-form');
   const resultsList = document.getElementById('results-list');
 
-  // Preview image
-  imageInput.addEventListener('change', (event) => {
-    const file = event.target.files[0];
+  imageInput.addEventListener('change', () => {
+    const file = imageInput.files[0];
+    previewContainer.innerHTML = '';
     if (file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        previewContainer.innerHTML = `<img src="${reader.result}" alt="Preview" style="max-width:100%; border:1px solid #ccc; border-radius:4px;" />`;
-      };
-      reader.readAsDataURL(file);
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      img.alt = 'Preview';
+      img.classList.add('preview-img');
+      previewContainer.appendChild(img);
     }
   });
 
-  // Submit form (mock fetch)
-  uploadForm.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // Clear previous results
-    resultsList.innerHTML = "";
+    const file = imageInput.files[0];
+    if (!file) {
+      resultsList.innerHTML = `<li>❌ Please select an image</li>`;
+      return;
+    }
 
-    // Simulated delay and fake results
-    setTimeout(() => {
-      const fakeResults = [
-        { id: 'BR001', similarity: 0.96 },
-        { id: 'BR014', similarity: 0.89 },
-        { id: 'BR007', similarity: 0.85 },
-      ];
+    const formData = new FormData();
+    formData.append('file', file);
 
-      fakeResults.forEach(result => {
-        const li = document.createElement('li');
-        li.textContent = `Brand ID: ${result.id} – Similarity: ${(result.similarity * 100).toFixed(1)}%`;
-        resultsList.appendChild(li);
+    resultsList.innerHTML = `<li>⏳ Searching...</li>`;
+
+    try {
+      const response = await fetch('http://localhost:8000/search', {
+        method: 'POST',
+        body: formData,
       });
-    }, 1000);
+
+      if (!response.ok) {
+        throw new Error("Server error");
+      }
+
+      const data = await response.json();
+
+      resultsList.innerHTML = '';
+
+      if (data?.result) {
+        const li = document.createElement('li');
+        li.innerHTML = `
+          ✅ Match found: <strong>${data.result.filename}</strong><br />
+          🔢 Distance: ${data.distance.toFixed(2)}
+        `;
+        resultsList.appendChild(li);
+      } else {
+        resultsList.innerHTML = `<li>❌ No match found</li>`;
+      }
+    } catch (err) {
+      resultsList.innerHTML = `<li>❌ Error: ${err.message}</li>`;
+    }
   });
 });
+

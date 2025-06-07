@@ -41,7 +41,8 @@ for img_path in tqdm(images):
 
         # Get embedding
         embedding = model.predict(x, verbose=0)[0]
-
+        embedding = embedding / np.linalg.norm(embedding)
+        
         # Store in ChromaDB
         collection.add(
             ids=[img_path.stem],
