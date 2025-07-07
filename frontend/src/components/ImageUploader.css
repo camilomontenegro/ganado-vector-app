@@ -1,13 +1,227 @@
-.upload-container {
+/* Reset and global styles */
+:root {
+  --primary-color: #EF233C;
+  --text-color: #2B2D42;
+  --bg-color: #ffffff;
+  --gray-light: #F8F9FA;
+  --border-radius: 8px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+body {
+  background-color: var(--gray-light);
+  color: var(--text-color);
+}
+
+/* Navbar styles */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 4rem;
+  background: var(--bg-color);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.logo {
+  font-size: 1.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.nav-links {
+  display: flex;
+  gap: 2.5rem;
+  align-items: center;
+}
+
+.nav-links a {
+  text-decoration: none;
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+.nav-links a.active {
+  color: var(--primary-color);
+}
+
+.upload-btn {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1.5rem;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.profile img {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Main content styles */
+.container {
+  max-width: 1200px;
+  margin: 3rem auto;
+  padding: 0 2rem;
+}
+
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 2rem;
+  font-weight: 600;
+}
+
+.main-content {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  max-width: 400px;
-  margin: 2rem auto;
+  gap: 2rem;
+}
+
+.upload-section {
+  background: var(--bg-color);
+  padding: 2rem;
+  border-radius: var(--border-radius);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: start;
+}
+
+.preview-area {
+  aspect-ratio: 1;
+  background: var(--gray-light);
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.upload-form-section {
+  padding: 1rem 0;
+}
+
+.upload-form-section h2 {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  color: var(--text-color);
+}
+
+.upload-form-section p {
+  color: #666;
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.upload-controls {
+  margin-bottom: 2rem;
+}
+
+.upload-btn-secondary {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 0.75rem 2rem;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.matches-control {
+  margin-bottom: 2rem;
+}
+
+.matches-control label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.matches-control input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: var(--border-radius);
+  font-size: 1rem;
+}
+
+.find-matches-btn {
+  width: 100%;
+  background: var(--primary-color);
+  color: white;
+  border: none;
   padding: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-family: sans-serif;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+/* Results section styles */
+.results-section {
+  background: var(--bg-color);
+  padding: 2rem;
+  border-radius: var(--border-radius);
+}
+
+.results-section h2 {
+  font-size: 1.8rem;
+  margin-bottom: 2rem;
+}
+
+.results-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 2rem;
+}
+
+.result-card {
+  background: var(--bg-color);
+  border: 1px solid #eee;
+  border-radius: var(--border-radius);
+  overflow: hidden;
+  transition: transform 0.2s;
+}
+
+.result-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.result-card img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: var(--gray-light);
+  border-bottom: 1px solid #eee;
+}
+
+.result-info {
+  padding: 1rem;
+}
+
+.similarity-score {
+  color: #666;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
 }
 
 input[type="file"] {
