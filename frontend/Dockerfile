@@ -4,7 +4,9 @@ FROM node:20-alpine AS build
 WORKDIR /app
 
 
-COPY package.json ./
+COPY frontend/package.json . 
+COPY frontend/. . 
+
 RUN ls -al /app
 RUN npm install
 
