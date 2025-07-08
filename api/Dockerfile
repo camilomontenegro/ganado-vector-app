@@ -3,12 +3,13 @@ FROM python:3.10-slim
 
 #Set workdir
 WORKDIR /app
-RUN ls -al /app
+
 #Install system dependencies
 RUN apt-get update && apt-get install -y build-essential
 
 #Copy requirements and install
 COPY requirements.txt .
+RUN ls -al /app
 RUN pip install --no-cache-dir -r requirements.txt
 
 #Copy the rest of the backend code
