@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultsList = document.getElementById('results-list');
   const nResultsInput = document.getElementById('n-results');
 
-  const API_URL = 'http://localhost:8000';
+  const API_URL = 'https://ganado-backend.onrender.com/search';
 
   imageInput.addEventListener('change', () => {
     const file = imageInput.files[0];
