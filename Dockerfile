@@ -24,6 +24,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend code
 COPY api/ .
 
+# Copy backend code
+COPY api/ .
+
+# Copy normalized images
+COPY scraper/normalized scraper/normalized
+
+
 # Copy frontend static build into backend folder
 COPY --from=frontend-builder /app/frontend/dist ./static
 
