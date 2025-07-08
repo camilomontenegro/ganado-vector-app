@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+chromadb
+tensorflow
+pillow
+tqdm
+python-multipart

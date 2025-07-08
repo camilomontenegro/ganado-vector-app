@@ -1,8 +1,8 @@
 # api/main.py
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from api.vectorizer import get_image_embedding
-from api.search import search_similar
+from vectorizer import get_image_embedding
+from search import search_similar
 from fastapi.staticfiles import StaticFiles
 import os
 from pathlib import Path
@@ -10,8 +10,8 @@ from pathlib import Path
 app = FastAPI()
 
 # Get the absolute path to the normalized images directory
-BASE_DIR = Path(__file__).resolve().parent.parent
-NORMALIZED_DIR = BASE_DIR / "scraper" / "normalized"
+NORMALIZED_DIR = Path(__file__).parent / "scraper" / "normalized"
+NORMALIZED_DIR = NORMALIZED_DIR.resolve()
 
 # Permitir CORS si el frontend se conecta desde otro puerto
 app.add_middleware(
