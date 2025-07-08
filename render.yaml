@@ -9,3 +9,6 @@ services:
     envVars:
       - key: PYTHONUNBUFFERED
         value: "1"
+envVars:
+  - key: PUBLIC_API_URL
+    value: https://brandmatch.onrender.com
