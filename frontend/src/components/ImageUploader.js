@@ -5,7 +5,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultsList = document.getElementById('results-list');
   const nResultsInput = document.getElementById('n-results');
 
-  const API_URL = 'https://ganado-backend.onrender.com/search';
+  const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:8000";
+
 
   imageInput.addEventListener('change', () => {
     const file = imageInput.files[0];
@@ -36,6 +37,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const response = await fetch(`${API_URL}/search?n_results=${n_results}`, {
         method: 'POST',
         body: formData,
+        headers: {
+          'Accept': 'application/json',
+        },
       });
 
       if (!response.ok) {
