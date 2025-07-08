@@ -4,6 +4,7 @@ services:
     env: docker
     plan: free
     dockerfilePath: ./frontend/Dockerfile
+    buildContext: ./frontend
     buildCommand: npm install && npm run build
     envVars: []
     autoDeploy: true
@@ -13,5 +14,6 @@ services:
     env: docker
     plan: free
     dockerfilePath: ./api/Dockerfile
+    buildContext: ./api
     envVars: []
     autoDeploy: true
