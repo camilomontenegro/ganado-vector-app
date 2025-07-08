@@ -22,9 +22,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+from fastapi.responses import FileResponse
+
+# Serve static files (frontend)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
 @app.get("/")
-def root():
-    return {"message": "✅ Cattle Brand Vector API is live"}
+def serve_frontend():
+    return FileResponse("static/index.html")
+
 
 @app.post("/search")
 async def search_image(file: UploadFile = File(...), n_results: int = 5):

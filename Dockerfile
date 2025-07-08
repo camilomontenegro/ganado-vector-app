@@ -24,15 +24,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy backend code
 COPY api/ .
 
-# Copy backend code
-COPY api/ .
-
 # Copy normalized images
 COPY scraper/normalized scraper/normalized
 
-
 # Copy frontend static build into backend folder
 COPY --from=frontend-builder /app/frontend/dist ./static
+
+# Mount frontend build as root static directory
+RUN mkdir -p /app/static
 
 EXPOSE 8000
 CMD ["uvicorn", "main:app", "--host=0.0.0.0", "--port", "8000"]

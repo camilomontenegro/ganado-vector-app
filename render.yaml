@@ -1,19 +1,11 @@
 services:
   - type: web
-    name: ganado-frontend
+    name: BrandMatch
     env: docker
     plan: free
-    dockerfilePath: ./frontend/Dockerfile
-    buildContext: ./frontend
-    buildCommand: npm install && npm run build
-    envVars: []
+    dockerfilePath: ./Dockerfile
+    buildContext: .
     autoDeploy: true
-
-  - type: web
-    name: ganado-backend
-    env: docker
-    plan: free
-    dockerfilePath: ./api/Dockerfile
-    buildContext: ./api
-    envVars: []
-    autoDeploy: true
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
