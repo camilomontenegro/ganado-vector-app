@@ -10,7 +10,7 @@ from pathlib import Path
 app = FastAPI()
 
 # Get the absolute path to the normalized images directory
-NORMALIZED_DIR = Path(__file__).parent / "scraper" / "normalized"
+NORMALIZED_DIR = Path(__file__).resolve().parent.parent / "scraper" / "normalized"
 NORMALIZED_DIR = NORMALIZED_DIR.resolve()
 
 # Permitir CORS si el frontend se conecta desde otro puerto
