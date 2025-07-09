@@ -1,4 +1,4 @@
-/* export function setupUploader() {
+export function setupUploader() {
   const form = document.getElementById('upload-form');
   const imageInput = document.getElementById('image-input');
   const previewImage = document.getElementById('preview-image');
@@ -67,7 +67,7 @@
       resultsList.innerHTML = `<div class="result-card">❌ Error: ${err.message}</div>`;
     }
   });
-} */
+}
 
 
 
