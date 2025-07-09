@@ -1,7 +1,7 @@
 # api/main.py
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from vectorizer import get_image_embedding
+from api.vectorizer import get_image_embedding
 from search import search_similar
 from fastapi.staticfiles import StaticFiles
 import os
