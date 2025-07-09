@@ -1,6 +1,7 @@
 ---
 // Add any imports or frontend logic here
 import './ImageUploader.css';
+import { setupUploader } from './ImageUploader.js';
 ---
 
 <main class="container">
@@ -44,7 +45,9 @@ import './ImageUploader.css';
 </main>
 
 <!-- ✅ Cargar JS como módulo con ruta relativa -->
-<script type="module" src="/components/ImageUploader.js"></script>
+<script type="module">
+  setupUploader();
+</script>
 
 
 <!-- <link rel="stylesheet" href="/src/components/ImageUploader.css" />
