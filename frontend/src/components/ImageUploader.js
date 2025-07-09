@@ -5,7 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultsList = document.getElementById('results-list');
   const nResultsInput = document.getElementById('n-results');
 
-  const API_URL = 'http://localhost:8000';
+  //replacing API_URL
+  const API_URL = import.meta.env.PUBLIC_API_URL;
+  //const API_URL = 'http://localhost:8000';
 
   imageInput.addEventListener('change', () => {
     const file = imageInput.files[0];
