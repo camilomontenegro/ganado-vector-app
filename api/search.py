@@ -1,5 +1,5 @@
 # api/search.py
-from chroma_client import collection
+from api.chroma_client import collection
 import numpy as np
 
 def search_similar(embedding: np.ndarray, n_results: int = 1):
