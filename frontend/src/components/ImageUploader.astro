@@ -46,8 +46,13 @@ import { setupUploader } from './ImageUploader.js';
 
 <!-- ✅ Cargar JS como módulo con ruta relativa -->
 <script type="module">
-  setupUploader();
+  import('./ImageUploader.js').then(mod => {
+    mod.setupUploader();
+  }).catch(err => {
+    console.error('❌ Failed to load uploader script:', err);
+  });
 </script>
+
 
 
 <!-- <link rel="stylesheet" href="/src/components/ImageUploader.css" />
