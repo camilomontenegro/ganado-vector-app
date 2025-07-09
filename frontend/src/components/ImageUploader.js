@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (file && previewImage) {
     previewImage.src = URL.createObjectURL(file);
   }
+  console.log(file);
 });
 
   form.addEventListener('submit', async (e) => {
