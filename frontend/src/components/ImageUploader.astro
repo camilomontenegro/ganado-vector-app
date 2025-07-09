@@ -2,7 +2,7 @@
 // Add any imports or frontend logic here
 ---
 
-<link rel="stylesheet" href="../components/ImageUploader.css" />
+<link rel="stylesheet" href="/src/components/ImageUploader.css" />
 
 <nav class="navbar">
   <div class="logo">
@@ -59,26 +59,27 @@
   </div>
 </main>
 
-<script type="module">
-  const API_URL = import.meta.env.PUBLIC_API_URL || "https://brandmatch-api-1815.onrender.com";
-
+<script>
   document.addEventListener('DOMContentLoaded', () => {
-    const form = document.getElementById('upload-form');
-    const imageInput = document.getElementById('image-input');
-    const previewImage = document.getElementById('preview-image');
+    const form = document.getElementById('upload-form') as HTMLFormElement;
+    const imageInput = document.getElementById('image-input') as HTMLInputElement;
+    const previewImage = document.getElementById('preview-image') as HTMLImageElement;
     const resultsList = document.getElementById('results-list');
-    const nResultsInput = document.getElementById('n-results');
-
-    imageInput?.addEventListener('change', () => {
-      if (imageInput?.files?.[0]) {
-        const file = imageInput.files[0];
+    const nResultsInput = document.getElementById('n-results') as HTMLInputElement;
+    
+    // Preview functionality
+    imageInput?.addEventListener('change', (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      if (target?.files?.[0]) {
+        const file = target.files[0];
         previewImage.src = URL.createObjectURL(file);
       }
     });
 
-    form?.addEventListener('submit', async (e) => {
+    // Form submission
+    form?.addEventListener('submit', async (e: Event) => {
       e.preventDefault();
-
+      
       if (!imageInput?.files?.[0]) {
         alert('Please select an image first');
         return;
@@ -86,42 +87,55 @@
 
       const formData = new FormData();
       formData.append('file', imageInput.files[0]);
-
+      
       const n_results = parseInt(nResultsInput?.value || '5');
-      resultsList.innerHTML = '<div class="result-card">⏳ Searching...</div>';
+      
+      if (resultsList) {
+        resultsList.innerHTML = '<div class="result-card">⏳ Searching...</div>';
+      }
 
       try {
-        const response = await fetch(`${API_URL}/search?n_results=${n_results}`, {
+        const response = await fetch(`http://localhost:8000/search?n_results=${n_results}`, {
           method: 'POST',
           body: formData,
         });
 
-        if (!response.ok) throw new Error('Server error');
+        if (!response.ok) {
+          throw new Error('Server error');
+        }
 
         const data = await response.json();
-        resultsList.innerHTML = '';
-
-        if (data?.matches && data.matches.length > 0) {
-          data.matches.forEach((match) => {
-            const similarityPercent = ((1 - match.distance) * 100).toFixed(1);
-            const resultCard = document.createElement('div');
-            resultCard.className = 'result-card';
-            resultCard.innerHTML = `
-              <img src="${API_URL}${match.imageUrl}" 
-                   alt="${match.filename}" 
-                   loading="lazy" />
-              <div class="result-info">
-                <div>${match.filename}</div>
-                <div class="similarity-score">Similarity: ${similarityPercent}%</div>
-              </div>
-            `;
-            resultsList.appendChild(resultCard);
-          });
-        } else {
-          resultsList.innerHTML = '<div class="result-card">❌ No matches found</div>';
+        
+        if (resultsList) {
+          resultsList.innerHTML = '';
+          
+          if (data?.matches && data.matches.length > 0) {
+            data.matches.forEach((match: any) => {
+              const similarityPercent = ((1 - match.distance) * 100).toFixed(1);
+              
+              const resultCard = document.createElement('div');
+              resultCard.className = 'result-card';
+              resultCard.innerHTML = `
+                <img src="http://localhost:8000${match.imageUrl}" 
+                     alt="${match.filename}" 
+                     loading="lazy" />
+                <div class="result-info">
+                  <div>${match.filename}</div>
+                  <div class="similarity-score">
+                    Similarity: ${similarityPercent}%
+                  </div>
+                </div>
+              `;
+              resultsList.appendChild(resultCard);
+            });
+          } else {
+            resultsList.innerHTML = '<div class="result-card">❌ No matches found</div>';
+          }
         }
       } catch (err) {
-        resultsList.innerHTML = `<div class="result-card">❌ Error: ${err instanceof Error ? err.message : 'Unknown error'}</div>`;
+        if (resultsList) {
+          resultsList.innerHTML = `<div class="result-card">❌ Error: ${err instanceof Error ? err.message : 'Unknown error'}</div>`;
+        }
       }
     });
   });
