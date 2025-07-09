@@ -1,7 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('upload-form');
   const imageInput = document.getElementById('image-input');
-  const previewContainer = document.getElementById('preview-container');
+  const previewImage = document.getElementById('preview-image');
   const resultsList = document.getElementById('results-list');
   const nResultsInput = document.getElementById('n-results');
 
@@ -10,16 +10,11 @@ document.addEventListener('DOMContentLoaded', () => {
   //const API_URL = 'http://localhost:8000';
 
   imageInput.addEventListener('change', () => {
-    const file = imageInput.files[0];
-    previewContainer.innerHTML = '';
-    if (file) {
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(file);
-      img.alt = 'Preview';
-      img.classList.add('preview-img');
-      previewContainer.appendChild(img);
-    }
-  });
+  const file = imageInput.files[0];
+  if (file && previewImage) {
+    previewImage.src = URL.createObjectURL(file);
+  }
+});
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
