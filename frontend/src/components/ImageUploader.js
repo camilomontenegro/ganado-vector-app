@@ -5,7 +5,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultsList = document.getElementById('results-list');
   const nResultsInput = document.getElementById('n-results');
 
-  const API_URL = 'http://localhost:8000';
+  const API_URLS = [
+  'http://localhost:8000',
+  'https://brandmatch-api-1815.onrender.com',
+  // add more URLs as needed
+];
 
   imageInput.addEventListener('change', () => {
     const file = imageInput.files[0];
