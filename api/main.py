@@ -16,7 +16,10 @@ NORMALIZED_DIR = NORMALIZED_DIR.resolve()
 # Permitir CORS si el frontend se conecta desde otro puerto
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://ganado-frontend.onrender.com"],
+    allow_origins=[
+        "http://localhost:4321",
+        "https://brandmatch.onrender.com"
+        ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

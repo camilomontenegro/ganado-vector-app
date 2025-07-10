@@ -5,8 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultsList = document.getElementById('results-list');
   const nResultsInput = document.getElementById('n-results');
 
-  const API_URL = import.meta.env.PUBLIC_API_URL || "http://localhost:8000";
-
+  const API_URL = 'http://localhost:8000';
 
   imageInput.addEventListener('change', () => {
     const file = imageInput.files[0];
@@ -37,9 +36,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const response = await fetch(`${API_URL}/search?n_results=${n_results}`, {
         method: 'POST',
         body: formData,
-        headers: {
-          'Accept': 'application/json',
-        },
       });
 
       if (!response.ok) {
@@ -57,8 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
           // Calculate similarity percentage (1 - distance, converted to percentage)
           const similarityPercent = ((1 - match.distance) * 100).toFixed(1);
           
-          resultCard.innerHTML = `
-            <img src="${API_URL}${match.imageUrl}" 
+          resultCard.innerHTML = 
+            `<img src="${API_URL}${match.imageUrl}" 
                  alt="${match.filename}" 
                  loading="lazy"
                  onerror="this.onerror=null; this.src='data:image/svg+xml,%3Csvg xmlns=\\'http://www.w3.org/2000/svg\\' width=\\'100\\' height=\\'100\\'%3E%3Crect width=\\'100\\' height=\\'100\\' fill=\\'%23eee\\'/%3E%3Ctext x=\\'50%25\\' y=\\'50%25\\' text-anchor=\\'middle\\' dy=\\'.3em\\' fill=\\'%23aaa\\'%3EError%3C/text%3E%3C/svg%3E';" />
@@ -79,4 +75,3 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
-
