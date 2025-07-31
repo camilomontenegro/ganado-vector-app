@@ -1,14 +1,11 @@
 {
-  "name": "ganado-vector-app-frontend",
-  "type": "module",
-  "version": "0.0.1",
+  "name": "brandmatch-frontend",
+  "version": "1.0.0",
+  "description": "Cattle brand matching frontend - Plain HTML/CSS/JS",
   "scripts": {
-    "dev": "astro dev",
-    "build": "astro build",
-    "preview": "astro preview",
-    "astro": "astro"
+    "dev": "python -m http.server 3000",
+    "serve": "python -m http.server 3000"
   },
-  "dependencies": {
-    "astro": "^5.8.0"
-  }
+  "devDependencies": {},
+  "dependencies": {}
 }

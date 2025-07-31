@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cattle Brand Finder</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">
+            <span>🐮</span> BrandMatch
+        </div>
+        <div class="nav-links">
+            <a href="#" class="active">Home</a>
+            <a href="#">About</a>
+            <a href="#">Contact</a>
+            <button class="upload-btn">Upload</button>
+        </div>
+        <div class="profile">
+            <img src="public/profile.jpg" alt="Profile" />
+        </div>
+    </nav>
+
+    <main class="container">
+        <h1>Upload a cattle brand</h1>
+
+        <div class="main-content">
+            <div class="upload-section">
+                <div class="preview-area">
+                    <img src="public/default-brand.png" alt="Brand preview" id="preview-image" class="preview-image" />
+                </div>
+                
+                <div class="upload-form-section">
+                    <h2>Upload your brand image</h2>
+                    <p>Upload a clear image of your cattle brand to find similar matches in our database.</p>
+                    
+                    <form id="upload-form">
+                        <div class="upload-controls">
+                            <button type="button" class="upload-btn-secondary" onclick="document.getElementById('image-input').click()">
+                                Upload...
+                            </button>
+                            <input type="file" id="image-input" name="image" accept="image/*" hidden />
+                        </div>
+
+                        <div class="matches-control">
+                            <label for="n-results">Number of Matches</label>
+                            <input type="number" id="n-results" name="n-results" min="1" max="10" value="5" />
+                        </div>
+
+                        <button type="submit" class="find-matches-btn">Find Matches</button>
+                    </form>
+                </div>
+            </div>
+
+            <section class="results-section" id="results-container">
+                <h2>Results</h2>
+                <div id="results-list" class="results-grid">
+                    <!-- Results will be inserted here -->
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
