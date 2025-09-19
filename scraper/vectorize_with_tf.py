@@ -2,9 +2,8 @@ import numpy as np
 from pathlib import Path
 from tqdm import tqdm
 import tensorflow as tf
-from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
-from tensorflow.keras.preprocessing import image as keras_image
+from keras.applications.mobilenet_v2 import MobileNetV2, preprocess_input
+from keras.preprocessing import image as keras_image
 from chromadb import PersistentClient
 
 # Load MobileNetV2 model (no top layer)

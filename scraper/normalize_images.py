@@ -8,7 +8,7 @@ INPUT_FOLDER = Path("images")
 OUTPUT_FOLDER = Path("normalized")
 OUTPUT_FOLDER.mkdir(exist_ok=True)
 
-# Standard size for models like CLIP, ResNet
+# Standard size
 SIZE = (224, 224)
 
 # Normalize each image
