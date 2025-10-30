@@ -20,7 +20,7 @@ try:
 except Exception as e:
     print(f"⚠️ Could not delete collection: {e}")
 
-# Re-create collection
+# Create collection
 collection = client.get_or_create_collection(name=collection_name)
 
 # Folder with normalized images
@@ -36,13 +36,13 @@ for img_path in tqdm(images):
         img = keras_image.load_img(img_path, target_size=(224, 224))
         x = keras_image.img_to_array(img)
         x = np.expand_dims(x, axis=0)
-        x = preprocess_input(x)
+        x = preprocess_input(x) # scale pixel values 0-255
 
         # Get embedding
         embedding = model.predict(x, verbose=0)[0]
         embedding = embedding / np.linalg.norm(embedding)
         
-        # Store in ChromaDB
+        # Store
         collection.add(
             ids=[img_path.stem],
             embeddings=[embedding.tolist()],
