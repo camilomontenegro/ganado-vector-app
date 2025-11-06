@@ -45,33 +45,8 @@ BrandMatch lets you upload a cattle brand image and instantly find the most simi
 
 ---
 
-## 🛠️ How to Run It
-
-### 1. Install dependencies
-- Backend: `pip install -r requirements.txt` (make sure you have Python 3.10+)
-- Frontend: `cd frontend && npm install`
-
-### 2. Prepare the database
-- Download images: `python scraper/scrape_duckduckgo.py`
-- Normalize images: `python scraper/normalize_images.py`
-- Vectorize: `python scraper/vectorize_with_tf.py`
-
-### 3. Start the backend
-```sh
-$env:PYTHONPATH="."
-uvicorn api.main:app --reload
-```
-
-### 4. Start the frontend
-```sh
-cd frontend
-npm run dev
-```
-
----
-
 ## 🖼️ How to Use
-1. Go to [localhost:4321](http://localhost:4321) in your browser.
+1. Go to https://brandmatch-static.onrender.com/ in your browser.
 2. Upload a cattle brand image (JPG/PNG).
 3. Set how many matches you want (1-10).
 4. Click "Find Matches".
