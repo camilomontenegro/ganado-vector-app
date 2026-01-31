@@ -1,6 +1,0 @@
-Please add these images to the public folder:
-
-1. profile.jpg - A profile picture placeholder (40x40px)
-2. default-brand.jpg - A default brand image placeholder showing a cattle brand silhouette
-
-You can use any placeholder images or create your own.
