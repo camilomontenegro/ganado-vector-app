@@ -1,0 +1,8 @@
+# Test-only dependencies. Deliberately NOT in api/requirements.txt — the Render
+# web service installs that file, and test tooling has no business in the
+# deployed image.
+#
+# Install:  pip install -r requirements-dev.txt
+-r api/requirements.txt
+pytest
+httpx          # required by fastapi.testclient.TestClient

@@ -17,23 +17,16 @@ NORMALIZED_DIR = NORMALIZED_DIR.resolve()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:4321",
-        "https://brandmatch.onrender.com"
+        "http://localhost:3000",                   # local dev: python -m http.server 3000
+        "https://brandmatch-static.onrender.com",  # Render Static Site
         ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-from fastapi.responses import FileResponse
-
-# Serve static files (frontend)
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-@app.get("/")
-def serve_frontend():
-    return FileResponse("static/index.html")
-
+# The frontend is served separately (frontend/ is plain static HTML), so this
+# app exposes only /search and /images.
 
 @app.post("/search")
 async def search_image(file: UploadFile = File(...), n_results: int = 5):
