@@ -3,6 +3,7 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from api.vectorizer import get_image_embedding
 from api.search import search_similar
+from api.chroma_client import collection
 from fastapi.staticfiles import StaticFiles
 import os
 from pathlib import Path
@@ -26,7 +27,19 @@ app.add_middleware(
 )
 
 # The frontend is served separately (frontend/ is plain static HTML), so this
-# app exposes only /search and /images.
+# app never serves HTML. Root is a health check, not a page.
+
+
+@app.get("/")
+def health():
+    """Liveness probe for Render, and a cheap way to wake a sleeping instance.
+
+    Reports the embedding count rather than a bare "ok" so the check also proves
+    the vector store actually loaded — an API that answers but has an empty
+    ChromaDB is worse than one that is plainly down.
+    """
+    return {"status": "ok", "indexed": collection.count()}
+
 
 @app.post("/search")
 async def search_image(file: UploadFile = File(...), n_results: int = 5):

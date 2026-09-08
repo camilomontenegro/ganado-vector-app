@@ -114,16 +114,31 @@ def test_images_are_readable_cross_origin(client):
 
 # ─── routing and CORS ────────────────────────────────────────────────────────
 
-def test_root_is_not_served(client):
-    """The frontend is a separate Render Static Site, so the API deliberately
-    has no / route. Documents the F1 fix; if a health endpoint is ever added,
-    update this test with it."""
-    assert client.get("/").status_code == 404
+def test_root_is_a_health_check(client):
+    """Root is a liveness probe, not a page — the frontend is a separate Render
+    Static Site. Render's health check may point here, so a 404 would fail the
+    deploy."""
+    resp = client.get("/")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "ok"
 
 
-def test_only_search_is_exposed(client):
+def test_health_reports_the_embedding_count(client):
+    """A bare 'ok' would still pass with an empty ChromaDB, which is the exact
+    failure this app is prone to when started from the wrong directory."""
+    assert client.get("/").json()["indexed"] == 78
+
+
+def test_no_html_is_served(client):
+    """Guards against the F1 regression: the API must never mount static files
+    or return a page. If this starts returning HTML, someone re-added the mount."""
+    assert "text/html" not in client.get("/").headers["content-type"]
+
+
+def test_only_expected_routes_are_exposed(client):
     paths = set(client.get("/openapi.json").json()["paths"])
-    assert paths == {"/search"}
+    assert paths == {"/", "/search"}
 
 
 def test_cors_allows_a_configured_origin(client):

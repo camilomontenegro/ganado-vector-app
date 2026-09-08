@@ -1,7 +1,11 @@
 fastapi
 uvicorn
 chromadb
-tensorflow
+# tensorflow-cpu has no macOS arm64 wheel, and the plain tensorflow wheel for
+# Linux bundles CUDA it will never use — probing for a GPU cost ~42s of every
+# Render cold start. The marker gives each platform the right one.
+tensorflow-cpu; sys_platform == "linux"
+tensorflow; sys_platform != "linux"
 pillow
 tqdm
 python-multipart
