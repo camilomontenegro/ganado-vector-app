@@ -73,7 +73,17 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (data?.matches && data.matches.length > 0) {
         data.matches.forEach(match => {
-          const similarityPercent = ((1 - match.distance) * 100).toFixed(1);
+          // ChromaDB is queried with its default space, which is SQUARED L2 —
+          // not cosine. For the unit vectors the API stores, ||a-b||² = 2 - 2·cos,
+          // so cos = 1 - distance/2. Dividing by 2 is what keeps this a percentage.
+          //
+          // Without it, anything past distance 1.0 renders negative: the worst
+          // pair in the current index sits at 1.66 and displayed -65.6%.
+          // MobileNetV2 ends in ReLU6, so every component is non-negative, which
+          // bounds cosine to [0,1] and distance to [0,2] — hence 0-100% here.
+          // Swap in a model with signed features (CLIP, say) and that guarantee
+          // is gone; clamp at that point.
+          const similarityPercent = ((1 - match.distance / 2) * 100).toFixed(1);
           
           const resultCard = document.createElement('div');
           resultCard.className = 'result-card';

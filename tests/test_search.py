@@ -44,15 +44,50 @@ def test_every_result_carries_a_filename(sample_image_bytes):
 
 
 def test_distances_exceed_one_so_they_are_not_cosine(sample_image_bytes):
-    """Documents the metric, and pins the bug in F10.
+    """Pins the metric the frontend's percentage formula depends on.
 
     The collection is created without a space setting, so Chroma uses squared L2.
-    For unit vectors that ranges 0..4 — NOT 0..1. The frontend computes
-    (1 - distance) * 100 as a similarity percentage, which goes negative for
-    anything past 1.0. Most of this index is past 1.0.
+    For unit vectors that ranges 0..2 — NOT 0..1. frontend/script.js therefore
+    computes (1 - distance / 2) * 100, not (1 - distance) * 100.
 
-    When F10 is fixed, this test should be updated alongside it.
+    If this ever starts failing, the metric changed and that formula is wrong.
     """
     emb = get_image_embedding(io.BytesIO(sample_image_bytes))
     distances = search_similar(emb, n_results=EXPECTED_EMBEDDINGS)["distances"][0]
     assert max(distances) > 1.0, "expected squared-L2 distances, not cosine"
+
+
+def test_embeddings_are_non_negative():
+    """The guarantee that makes the frontend percentage safe.
+
+    MobileNetV2 with include_top=False ends in ReLU6, so every feature is >= 0.
+    Non-negative unit vectors have cosine in [0,1], which bounds squared-L2
+    distance to [0,2], which bounds (1 - d/2) * 100 to 0-100%.
+
+    Swap in a model with signed features and this fails — at which point the
+    frontend needs a clamp.
+    """
+    import numpy as np
+    from api.chroma_client import collection
+
+    embeddings = np.array(collection.get(include=["embeddings"])["embeddings"])
+    assert embeddings.min() >= 0.0
+
+
+def test_no_pair_in_the_index_would_render_a_negative_percentage():
+    """End-to-end guard for F10, over every pair rather than one query.
+
+    Checks the whole 78x78 distance matrix, so a single unlucky image cannot
+    reintroduce a negative percentage unnoticed.
+    """
+    import numpy as np
+    from api.chroma_client import collection
+
+    embeddings = np.array(collection.get(include=["embeddings"])["embeddings"])
+    worst_distance = float((2 - 2 * (embeddings @ embeddings.T)).max())
+
+    assert worst_distance <= 2.0, f"distance {worst_distance} exceeds the L2 bound"
+    assert (1 - worst_distance / 2) * 100 >= 0.0
+
+    # The formula the bug replaced would have gone badly negative here.
+    assert (1 - worst_distance) * 100 < 0, "regression fixture no longer meaningful"
