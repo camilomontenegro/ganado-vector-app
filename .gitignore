@@ -1,0 +1,30 @@
+# Python bytecode — regenerated on every run, never useful in git.
+__pycache__/
+*.py[cod]
+
+# Local virtualenv created by init.sh (~1.6 GB).
+.venv/
+
+# pytest scratch
+.pytest_cache/
+
+# macOS
+.DS_Store
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DELIBERATELY NOT IGNORED: chroma_db/ and scraper/normalized/
+#
+# These are committed on purpose and the deployment depends on it. Render has an
+# ephemeral filesystem and there is no database server, so the vector store and
+# the images ship *inside the build*. Production proves it: GET / returns
+# {"status":"ok","indexed":78}, and that 78 is read from the committed chroma_db.
+#
+# Ignoring or removing them would leave the deployed API with an empty index and
+# no images to serve, with no error to explain why.
+#
+# Known wart: opening the Chroma client appends a row to the internal
+# `acquire_write` lock table, so chroma_db/chroma.sqlite3 shows as modified after
+# any run. Verified harmless — all 156 embedding rows and every other table are
+# identical; only that lock table differs. Discard it before committing:
+#     git checkout -- chroma_db/
+# Only commit chroma_db/ when you have actually re-vectorized.
