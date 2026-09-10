@@ -148,6 +148,25 @@ def test_images_are_readable_cross_origin(client):
     assert resp.headers.get("access-control-allow-origin") == "*"
 
 
+def test_images_wildcard_is_not_paired_with_credentials(client):
+    """The CORS spec forbids Access-Control-Allow-Origin: * together with
+    Allow-Credentials: true, and browsers reject the pair outright. /images serves
+    the wildcard, so allow_credentials must stay off. This only ever "worked"
+    because <img> tags send no credentials."""
+    resp = client.get(f"/images/{SAMPLE_NAME}", headers={"Origin": PROD_FRONTEND_ORIGIN})
+    assert resp.headers.get("access-control-allow-origin") == "*"
+    assert "access-control-allow-credentials" not in resp.headers
+
+
+def test_no_endpoint_advertises_credentials(client):
+    """Nothing here uses cookies, sessions or Authorization headers. If this starts
+    failing, someone re-enabled allow_credentials — which silently invalidates the
+    wildcard on /images."""
+    for path in ("/", f"/images/{SAMPLE_NAME}"):
+        resp = client.get(path, headers={"Origin": PROD_FRONTEND_ORIGIN})
+        assert "access-control-allow-credentials" not in resp.headers, path
+
+
 # ─── routing and CORS ────────────────────────────────────────────────────────
 
 def test_root_is_a_health_check(client):

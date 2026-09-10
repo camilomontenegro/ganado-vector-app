@@ -25,7 +25,13 @@ app.add_middleware(
         "http://localhost:3000",                   # local dev: python -m http.server 3000
         "https://brandmatch-static.onrender.com",  # Render Static Site
         ],
-    allow_credentials=True,
+    # allow_credentials is deliberately OFF. Nothing here uses cookies, sessions
+    # or Authorization headers, so it bought nothing — and it actively broke
+    # /images, which serves `Access-Control-Allow-Origin: *`. The CORS spec
+    # forbids pairing a wildcard origin with Allow-Credentials, and browsers
+    # reject the combination outright. It only appeared to work because <img>
+    # tags send no credentials.
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -84,7 +90,12 @@ async def search_image(file: UploadFile = File(...), n_results: int = 5):
 from fastapi.staticfiles import StaticFiles
 app.mount("/images", StaticFiles(directory=str(NORMALIZED_DIR)), name="images")
 
-# Add CORS headers for images
+# Thumbnails are public brand pictures with nothing sensitive in them, and the
+# frontend is a separate Render Static Site, so /images is deliberately readable
+# from any origin — unlike /search, which stays on the allowlist above.
+#
+# This wildcard is only valid because allow_credentials is False; pairing the two
+# is forbidden by the CORS spec and browsers refuse it.
 @app.middleware("http")
 async def add_cors_headers(request, call_next):
     response = await call_next(request)
