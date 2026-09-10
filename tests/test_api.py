@@ -2,6 +2,7 @@
 depend on (the frontend is a separate Static Site, so every call is cross-origin).
 """
 import io
+import logging
 
 import pytest
 from PIL import Image
@@ -80,6 +81,41 @@ def test_search_rejects_non_image(client):
     assert resp.status_code == 400
 
 
+def test_corrupt_image_does_not_leak_internals(client):
+    """The old handler interpolated the exception into the response, so a corrupt
+    upload returned the tempfile object's type and memory address. Anything that
+    names a path, module or object is a disclosure."""
+    resp = client.post(
+        "/search",
+        files={"file": ("broken.jpg", io.BytesIO(b"\xff\xd8\xff garbage"), "image/jpeg")},
+    )
+    assert resp.status_code == 500
+    body = resp.text
+    for token in ("SpooledTemporaryFile", "0x", "/Users/", "site-packages",
+                  "Traceback", "vectorizer", ".py", "PIL"):
+        assert token not in body, f"response leaks {token!r}: {body}"
+
+
+def test_corrupt_image_returns_a_generic_message(client):
+    resp = client.post(
+        "/search",
+        files={"file": ("broken.jpg", io.BytesIO(b"not an image at all"), "image/jpeg")},
+    )
+    assert resp.json()["detail"] == "Could not process the uploaded image."
+
+
+def test_failure_is_logged_server_side(client, caplog):
+    """The detail has to survive somewhere — losing it entirely would trade a
+    disclosure bug for an undebuggable one."""
+    with caplog.at_level(logging.ERROR, logger="brandmatch.api"):
+        client.post(
+            "/search",
+            files={"file": ("broken.jpg", io.BytesIO(b"nope"), "image/jpeg")},
+        )
+    assert any(r.levelname == "ERROR" for r in caplog.records)
+    assert "UnidentifiedImageError" in caplog.text
+
+
 def test_search_accepts_png_upload(client):
     """The frontend allows JPG or PNG; PNG must survive the RGB conversion."""
     buf = io.BytesIO()
@@ -122,6 +158,23 @@ def test_root_is_a_health_check(client):
     assert resp.status_code == 200
     body = resp.json()
     assert body["status"] == "ok"
+
+
+def test_head_root_is_allowed(client):
+    """Render's port scanner probes with HEAD. FastAPI's @app.get() registers GET
+    only — unlike plain Starlette — so this returned 405 and polluted the deploy
+    logs. Any uptime monitor defaulting to HEAD would have read the service as
+    down."""
+    resp = client.head("/")
+    assert resp.status_code == 200
+
+
+def test_head_root_sends_no_body(client):
+    """HEAD must carry the same headers as GET but no body, per HTTP semantics."""
+    head = client.head("/")
+    get = client.get("/")
+    assert head.content == b""
+    assert head.headers["content-type"] == get.headers["content-type"]
 
 
 def test_health_reports_the_embedding_count(client):

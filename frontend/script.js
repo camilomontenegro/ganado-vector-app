@@ -11,6 +11,52 @@ document.addEventListener('DOMContentLoaded', () => {
     'https://brandmatch-api-1815.onrender.com'
   ];
 
+  // ─── Warm-up ──────────────────────────────────────────────────────────────
+  // The Render Web Service sleeps when idle and takes ~100s to wake — measured,
+  // not estimated. Almost all of that is Render starting the container, not our
+  // code, so it cannot be optimised away from here.
+  //
+  // Firing one cheap request the moment the page loads means the server wakes
+  // while the user is still choosing a file, instead of only after they press
+  // Find Matches. This does NOT make anything faster; it overlaps the wait with
+  // something the user was going to spend time on anyway.
+  let apiAwake = false;
+  const warmUpStartedAt = Date.now();
+
+  async function warmUp() {
+    for (const base of API_URLS) {
+      try {
+        const response = await fetch(`${base}/`, { method: 'GET' });
+        if (response.ok) {
+          apiAwake = true;
+          const seconds = ((Date.now() - warmUpStartedAt) / 1000).toFixed(1);
+          console.log(`API ready via ${base} after ${seconds}s`);
+          return;
+        }
+      } catch (error) {
+        // Expected for localhost when only the deployed API is running.
+      }
+    }
+  }
+  warmUp();
+
+  // Elapsed-time message shown while a cold server is still starting up.
+  function startWakingMessage() {
+    const startedAt = Date.now();
+    const render = () => {
+      const elapsed = Math.round((Date.now() - startedAt) / 1000);
+      resultsList.innerHTML = apiAwake
+        ? `<div class="result-card">⏳ Searching… (${elapsed}s)</div>`
+        : `<div class="result-card">
+             ⏳ Waking the server — this can take up to two minutes on the free
+             tier, and only happens after it has been idle.<br />
+             <small>${elapsed}s elapsed. It stays fast once awake.</small>
+           </div>`;
+    };
+    render();
+    return setInterval(render, 1000);
+  }
+
   // Function to try multiple API URLs
   async function tryAPICall(endpoint, options) {
     for (let i = 0; i < API_URLS.length; i++) {
@@ -57,8 +103,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     const n_results = parseInt(nResultsInput.value) || 5;
     
-    // Show loading state
-    resultsList.innerHTML = '<div class="result-card">⏳ Searching...</div>';
+    // Show loading state — ticks, and says WHY it is slow when the server is cold.
+    const waitingTimer = startWakingMessage();
 
     try {
       const { response, apiUrl } = await tryAPICall(`/search?n_results=${n_results}`, {
@@ -67,7 +113,9 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       const data = await response.json();
-      
+      apiAwake = true;          // it answered, so it is up
+      clearInterval(waitingTimer);
+
       // Clear results
       resultsList.innerHTML = '';
       
@@ -108,6 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
         resultsList.innerHTML = '<div class="result-card">❌ No matches found</div>';
       }
     } catch (error) {
+      clearInterval(waitingTimer);
       console.error('Search failed:', error);
       resultsList.innerHTML = `<div class="result-card">❌ Error: ${error.message}</div>`;
     }

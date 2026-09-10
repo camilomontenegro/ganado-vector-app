@@ -1,4 +1,6 @@
 # api/main.py
+import logging
+
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from api.vectorizer import get_image_embedding
@@ -7,6 +9,8 @@ from api.chroma_client import collection
 from fastapi.staticfiles import StaticFiles
 import os
 from pathlib import Path
+
+logger = logging.getLogger("brandmatch.api")
 
 app = FastAPI()
 
@@ -30,13 +34,18 @@ app.add_middleware(
 # app never serves HTML. Root is a health check, not a page.
 
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 def health():
     """Liveness probe for Render, and a cheap way to wake a sleeping instance.
 
     Reports the embedding count rather than a bare "ok" so the check also proves
     the vector store actually loaded — an API that answers but has an empty
     ChromaDB is worse than one that is plainly down.
+
+    HEAD is listed explicitly. FastAPI's @app.get() registers GET only, unlike
+    plain Starlette which adds HEAD alongside it — so this route used to answer
+    Render's port scanner with 405, and any uptime monitor defaulting to HEAD
+    would have reported the service as down.
     """
     return {"status": "ok", "indexed": collection.count()}
 
@@ -59,8 +68,17 @@ async def search_image(file: UploadFile = File(...), n_results: int = 5):
             })
         
         return {"matches": matches}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing image: {e}")
+    except Exception:
+        # Log the full traceback server-side, return nothing useful to an attacker.
+        # The old version interpolated the exception straight into the response,
+        # which leaked internals — a corrupt upload returned
+        # "cannot identify image file <tempfile.SpooledTemporaryFile object at 0x...>",
+        # exposing an object type and a memory address.
+        logger.exception("Failed to process uploaded image %r", file.filename)
+        raise HTTPException(
+            status_code=500,
+            detail="Could not process the uploaded image.",
+        )
 
 # Mount the normalized images directory using absolute path
 from fastapi.staticfiles import StaticFiles
