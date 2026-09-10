@@ -81,39 +81,88 @@ def test_search_rejects_non_image(client):
     assert resp.status_code == 400
 
 
-def test_corrupt_image_does_not_leak_internals(client):
-    """The old handler interpolated the exception into the response, so a corrupt
-    upload returned the tempfile object's type and memory address. Anything that
-    names a path, module or object is a disclosure."""
+def _truncated_jpeg() -> bytes:
+    """A real JPEG cut short — what an interrupted upload produces. PIL accepts the
+    header then raises OSError partway through, a different path from garbage."""
+    buf = io.BytesIO()
+    Image.new("RGB", (300, 300), (200, 30, 30)).save(buf, format="JPEG")
+    full = buf.getvalue()
+    return full[: len(full) // 3]
+
+
+@pytest.mark.parametrize(
+    "name,payload",
+    [
+        ("garbage", b"not an image at all"),
+        ("empty", b""),
+        ("jpeg magic then junk", b"\xff\xd8\xff" + b"junk" * 20),
+    ],
+)
+def test_unreadable_upload_is_a_client_error(client, name, payload):
+    """400, not 500. A mistyped file is the caller's mistake; reporting it as a
+    server fault makes error-rate alerting count normal user errors and trains
+    you to ignore it."""
     resp = client.post(
-        "/search",
-        files={"file": ("broken.jpg", io.BytesIO(b"\xff\xd8\xff garbage"), "image/jpeg")},
+        "/search", files={"file": ("x.jpg", io.BytesIO(payload), "image/jpeg")}
     )
-    assert resp.status_code == 500
-    body = resp.text
+    assert resp.status_code == 400, name
+    assert resp.json()["detail"] == "That file could not be read as an image. Try a JPG or PNG."
+
+
+def test_truncated_upload_is_a_client_error(client):
+    resp = client.post(
+        "/search", files={"file": ("cut.jpg", io.BytesIO(_truncated_jpeg()), "image/jpeg")}
+    )
+    assert resp.status_code == 400
+    assert resp.json()["detail"] == "That image file appears to be damaged or incomplete."
+
+
+@pytest.mark.parametrize(
+    "payload", [b"not an image at all", b"", None]  # None -> truncated jpeg
+)
+def test_no_bad_upload_leaks_internals(client, payload):
+    """F5's guarantee has to hold on every branch, not just the 500 one."""
+    data = _truncated_jpeg() if payload is None else payload
+    resp = client.post(
+        "/search", files={"file": ("x.jpg", io.BytesIO(data), "image/jpeg")}
+    )
     for token in ("SpooledTemporaryFile", "0x", "/Users/", "site-packages",
                   "Traceback", "vectorizer", ".py", "PIL"):
-        assert token not in body, f"response leaks {token!r}: {body}"
+        assert token not in resp.text, f"leaks {token!r}: {resp.text}"
 
 
-def test_corrupt_image_returns_a_generic_message(client):
-    resp = client.post(
-        "/search",
-        files={"file": ("broken.jpg", io.BytesIO(b"not an image at all"), "image/jpeg")},
-    )
-    assert resp.json()["detail"] == "Could not process the uploaded image."
+def test_unreadable_upload_is_not_logged_as_an_error(client, caplog):
+    """The point of F16: these must stop showing up as server errors."""
+    with caplog.at_level(logging.DEBUG, logger="brandmatch.api"):
+        client.post("/search", files={"file": ("x.jpg", io.BytesIO(b"nope"), "image/jpeg")})
+    assert not [r for r in caplog.records if r.levelname == "ERROR"]
+    assert "Rejected unreadable upload" in caplog.text
 
 
-def test_failure_is_logged_server_side(client, caplog):
-    """The detail has to survive somewhere — losing it entirely would trade a
-    disclosure bug for an undebuggable one."""
+def test_a_genuine_server_fault_still_logs_a_traceback(
+    client, monkeypatch, caplog, sample_image_bytes
+):
+    """F5 must survive F16: a real fault keeps its full detail server-side while
+    the client still learns nothing. Without this, narrowing to 400s could quietly
+    swallow the errors that actually matter."""
+    import api.main
+
+    def boom(*args, **kwargs):
+        raise RuntimeError("vector store exploded")
+
+    monkeypatch.setattr(api.main, "search_similar", boom)
+
     with caplog.at_level(logging.ERROR, logger="brandmatch.api"):
-        client.post(
+        resp = client.post(
             "/search",
-            files={"file": ("broken.jpg", io.BytesIO(b"nope"), "image/jpeg")},
+            files={"file": ("1.jpg", io.BytesIO(sample_image_bytes), "image/jpeg")},
         )
-    assert any(r.levelname == "ERROR" for r in caplog.records)
-    assert "UnidentifiedImageError" in caplog.text
+
+    assert resp.status_code == 500
+    assert resp.json()["detail"] == "Could not process the uploaded image."
+    assert "vector store exploded" not in resp.text        # not leaked to the client
+    assert "vector store exploded" in caplog.text          # but kept in the log
+    assert "Traceback" in caplog.text
 
 
 def test_search_accepts_png_upload(client):

@@ -9,6 +9,7 @@ from api.chroma_client import collection
 from fastapi.staticfiles import StaticFiles
 import os
 from pathlib import Path
+from PIL import UnidentifiedImageError
 
 logger = logging.getLogger("brandmatch.api")
 
@@ -74,12 +75,36 @@ async def search_image(file: UploadFile = File(...), n_results: int = 5):
             })
         
         return {"matches": matches}
+    except UnidentifiedImageError:
+        # The upload is not an image we can decode. That is the caller's mistake,
+        # so it is a 400 — returning 500 made every mistyped file look like a
+        # server fault and trained us to ignore our own error rate.
+        logger.info("Rejected unreadable upload %r", file.filename)
+        raise HTTPException(
+            status_code=400,
+            detail="That file could not be read as an image. Try a JPG or PNG.",
+        )
+    except OSError as exc:
+        # Truncated or damaged uploads land here — an interrupted upload is the
+        # usual cause, and it is still the caller's problem. UnidentifiedImageError
+        # subclasses OSError, so it must be caught above this.
+        #
+        # A genuine disk-level IO fault would also land here and be misreported as
+        # a 400. That is the deliberate trade: interrupted uploads are common and
+        # disk faults are rare, and exc_info keeps the full traceback in the log
+        # either way, so a real fault stays findable.
+        logger.warning(
+            "Rejected damaged upload %r: %s", file.filename, exc, exc_info=True
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="That image file appears to be damaged or incomplete.",
+        )
     except Exception:
-        # Log the full traceback server-side, return nothing useful to an attacker.
-        # The old version interpolated the exception straight into the response,
-        # which leaked internals — a corrupt upload returned
-        # "cannot identify image file <tempfile.SpooledTemporaryFile object at 0x...>",
-        # exposing an object type and a memory address.
+        # Anything left really is our fault. Log the full traceback server-side and
+        # return nothing useful to an attacker. The original version interpolated
+        # the exception straight into the response, leaking the tempfile object's
+        # type and a memory address.
         logger.exception("Failed to process uploaded image %r", file.filename)
         raise HTTPException(
             status_code=500,

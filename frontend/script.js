@@ -5,11 +5,22 @@ document.addEventListener('DOMContentLoaded', () => {
   const resultsList = document.getElementById('results-list');
   const nResultsInput = document.getElementById('n-results');
 
-  // API URLs with fallback support
-  const API_URLS = [
-    'http://localhost:8000',
-    'https://brandmatch-api-1815.onrender.com'
-  ];
+  // Which API to talk to, decided by where this page is being served from.
+  //
+  // The old version always tried localhost:8000 first, so every search on the
+  // deployed site began with a request that could not possibly succeed — a
+  // guaranteed failure and a console error before the real call went out.
+  //
+  // Served from localhost, keep the fallback: it is genuinely useful to develop
+  // the page against the deployed API when no local one is running.
+  // Served from anywhere else, there is exactly one right answer, so go straight
+  // to it and waste nothing.
+  const LOCAL_API = 'http://localhost:8000';
+  const PROD_API = 'https://brandmatch-api-1815.onrender.com';
+  const isLocalPage = ['localhost', '127.0.0.1', '::1', ''].includes(
+    window.location.hostname
+  );
+  const API_URLS = isLocalPage ? [LOCAL_API, PROD_API] : [PROD_API];
 
   // ─── Warm-up ──────────────────────────────────────────────────────────────
   // The Render Web Service sleeps when idle and takes ~100s to wake — measured,
