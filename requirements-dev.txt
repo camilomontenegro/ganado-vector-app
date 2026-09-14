@@ -6,3 +6,5 @@
 -r api/requirements.txt
 pytest
 httpx          # required by fastapi.testclient.TestClient
+playwright     # real-browser tests of frontend/script.js; also run:
+               #   python -m playwright install chromium
