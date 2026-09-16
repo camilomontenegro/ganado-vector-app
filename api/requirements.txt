@@ -1,11 +1,19 @@
-fastapi
-uvicorn
-chromadb
+# Runtime dependencies for the Render Web Service.
+#
+# Every direct dependency is pinned exactly, and constraints.txt pins everything
+# they pull in, to the versions production already runs. Unpinned, a routine
+# deploy could install a new release of anything — chromadb once silently
+# rewrote the committed vector store's on-disk format that way.
+-c constraints.txt
+
+fastapi==0.141.1
+uvicorn==0.52.4
+chromadb==1.5.9
 # tensorflow-cpu has no macOS arm64 wheel, and the plain tensorflow wheel for
 # Linux bundles CUDA it will never use — probing for a GPU cost ~42s of every
 # Render cold start. The marker gives each platform the right one.
-tensorflow-cpu; sys_platform == "linux"
-tensorflow; sys_platform != "linux"
-pillow
-tqdm
-python-multipart
+tensorflow-cpu==2.21.0; sys_platform == "linux"
+tensorflow==2.21.0; sys_platform != "linux"
+pillow==12.3.0
+tqdm==4.70.0
+python-multipart==0.0.32

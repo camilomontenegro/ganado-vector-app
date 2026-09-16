@@ -1,10 +1,10 @@
 # Test-only dependencies. Deliberately NOT in api/requirements.txt — the Render
 # web service installs that file, and test tooling has no business in the
-# deployed image.
+# deployed image. Pulls in the runtime pins (and their constraints) first.
 #
 # Install:  pip install -r requirements-dev.txt
+#           python -m playwright install chromium
 -r api/requirements.txt
-pytest
-httpx          # required by fastapi.testclient.TestClient
-playwright     # real-browser tests of frontend/script.js; also run:
-               #   python -m playwright install chromium
+pytest==9.1.1
+httpx==0.28.1          # required by fastapi.testclient.TestClient
+playwright==1.62.0     # its browser build is tied to this exact version

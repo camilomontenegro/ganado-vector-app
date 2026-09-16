@@ -60,7 +60,7 @@ def health():
 @app.post("/search")
 async def search_image(file: UploadFile = File(...), n_results: int = 5):
     if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=400, detail="File must be an image.")
+        raise HTTPException(status_code=400, detail="El archivo debe ser una imagen.")
     try:
         embedding = get_image_embedding(file.file)
         results = search_similar(embedding, n_results=n_results)
@@ -82,7 +82,7 @@ async def search_image(file: UploadFile = File(...), n_results: int = 5):
         logger.info("Rejected unreadable upload %r", file.filename)
         raise HTTPException(
             status_code=400,
-            detail="That file could not be read as an image. Try a JPG or PNG.",
+            detail="No se pudo leer el archivo como imagen. Use un JPG o PNG.",
         )
     except OSError as exc:
         # Truncated or damaged uploads land here — an interrupted upload is the
@@ -98,7 +98,7 @@ async def search_image(file: UploadFile = File(...), n_results: int = 5):
         )
         raise HTTPException(
             status_code=400,
-            detail="That image file appears to be damaged or incomplete.",
+            detail="La imagen parece estar dañada o incompleta.",
         )
     except Exception:
         # Anything left really is our fault. Log the full traceback server-side and
@@ -108,7 +108,7 @@ async def search_image(file: UploadFile = File(...), n_results: int = 5):
         logger.exception("Failed to process uploaded image %r", file.filename)
         raise HTTPException(
             status_code=500,
-            detail="Could not process the uploaded image.",
+            detail="No se pudo procesar la imagen enviada.",
         )
 
 # Mount the normalized images directory using absolute path

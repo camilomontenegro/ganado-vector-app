@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es-CO">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BrandMatch — Cattle Brand Search</title>
+    <title>BrandMatch — Búsqueda de hierros ganaderos</title>
     <link rel="icon" href="public/favicon.svg" type="image/svg+xml">
     <!-- Version query busts the CDN/browser cache on deploy. Without it a returning
          visitor gets the new markup with the previously cached stylesheet, which
          renders as an unstyled page. Bump this whenever styles.css or script.js
          changes meaningfully. -->
-    <link rel="stylesheet" href="styles.css?v=2">
+    <link rel="stylesheet" href="styles.css?v=4">
     <script>
       // Applied before first paint so the page never flashes the wrong theme.
       // A stored choice wins; otherwise the OS preference is used via CSS.
@@ -33,7 +33,7 @@
         </a>
 
         <button id="theme-toggle" class="theme-toggle" type="button"
-                aria-label="Switch between light and dark theme">
+                aria-label="Cambiar entre tema claro y oscuro">
             <svg class="theme-toggle__sun" viewBox="0 0 24 24" width="17" height="17" fill="none"
                  stroke="currentColor" stroke-width="2" stroke-linecap="round">
                 <circle cx="12" cy="12" r="4.2" />
@@ -48,11 +48,11 @@
 
     <main class="page">
         <section class="hero">
-            <p class="hero__eyebrow">Vector image search</p>
-            <h1 class="hero__title">Find the brand<br>behind the iron.</h1>
+            <p class="hero__eyebrow">Búsqueda por imagen</p>
+            <h1 class="hero__title">Encuentre el registro<br>detrás del hierro.</h1>
             <p class="hero__lede">
-                Drop in a cattle brand and BrandMatch compares its shape against every
-                mark in the registry, ranked by visual similarity.
+                Suba la foto de un hierro y BrandMatch compara su forma con cada marca
+                del registro, ordenadas por similitud visual.
             </p>
         </section>
 
@@ -60,7 +60,7 @@
             <!-- Drop zone -->
             <div class="panel panel--drop">
                 <div id="drop-zone" class="dropzone" tabindex="0" role="button"
-                     aria-label="Drop an image here or press Enter to browse">
+                     aria-label="Suelte una imagen aquí o presione Enter para buscar un archivo">
                     <img src="public/default-brand.png" alt="" id="preview-image" class="dropzone__preview" />
 
                     <div class="dropzone__prompt" id="drop-prompt">
@@ -69,8 +69,8 @@
                             <path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5" />
                             <path d="M3.5 15v3.2A2.3 2.3 0 0 0 5.8 20.5h12.4a2.3 2.3 0 0 0 2.3-2.3V15" />
                         </svg>
-                        <p class="dropzone__title">Drop an image here</p>
-                        <p class="dropzone__hint">or <span class="link">browse your files</span> · JPG or PNG</p>
+                        <p class="dropzone__title">Suelte una imagen aquí</p>
+                        <p class="dropzone__hint">o <span class="link">busque en sus archivos</span> · JPG o PNG</p>
                     </div>
 
                     <p class="dropzone__filename" id="file-name" hidden></p>
@@ -80,44 +80,44 @@
 
             <!-- Controls -->
             <div class="panel panel--controls">
-                <h2 class="panel__heading">Search settings</h2>
+                <h2 class="panel__heading">Opciones de búsqueda</h2>
 
                 <label class="field" for="n-results">
-                    <span class="field__label">Number of matches</span>
+                    <span class="field__label">Número de resultados</span>
                     <input type="number" id="n-results" name="n-results" min="1" max="10" value="5" />
                 </label>
 
                 <button type="submit" class="btn btn--primary">
-                    Find matches
+                    Buscar coincidencias
                 </button>
 
                 <p class="panel__note">
-                    Any bold, high-contrast shape works — a photographed iron, a scan,
-                    or something you sketched yourself.
+                    Sirve cualquier forma clara y con buen contraste: la foto de un hierro,
+                    un escaneo o un dibujo propio.
                 </p>
 
                 <div class="statusline">
                     <span class="statusline__dot" id="api-dot" data-state="waking"></span>
-                    <span id="api-status">Connecting to the registry…</span>
+                    <span id="api-status">Conectando con el registro…</span>
                 </div>
             </div>
         </form>
 
         <section class="results" id="results-container">
             <div class="results__head">
-                <h2 class="results__title">Results</h2>
+                <h2 class="results__title">Resultados</h2>
                 <span class="results__count" id="results-count"></span>
             </div>
             <div id="results-list" class="results__grid">
-                <p class="results__empty">Matches will appear here once you run a search.</p>
+                <p class="results__empty">Los resultados aparecerán aquí cuando realice una búsqueda.</p>
             </div>
         </section>
     </main>
 
     <footer class="footer">
-        <span>BrandMatch — image similarity over a MobileNetV2 vector index.</span>
+        <span>BrandMatch — búsqueda por similitud de imagen con un índice vectorial MobileNetV2.</span>
     </footer>
 
-    <script src="script.js?v=2"></script>
+    <script src="script.js?v=4"></script>
 </body>
 </html>

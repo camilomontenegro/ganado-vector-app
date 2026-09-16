@@ -67,6 +67,8 @@ class FakeAPI:
         self.search_status = 200
         self.search_body = {"matches": [match("1.jpg", 0.0)]}
         self.hold_search = False
+        self.search_raw_body = None   # when set, sent verbatim (e.g. invalid JSON)
+        self.images_ok = True
         self._held = []
 
         # Playwright runs matching routes in REVERSE registration order, so the
@@ -105,6 +107,8 @@ class FakeAPI:
                 return None
             return self._answer_search(route)
         if path.startswith("/images/"):
+            if not self.images_ok:
+                return route.fulfill(status=404, headers=CORS, body="")
             return route.fulfill(
                 status=200, headers=CORS, content_type="image/jpeg",
                 body=SAMPLE_IMAGE.read_bytes(),
@@ -112,6 +116,9 @@ class FakeAPI:
         return route.fulfill(status=404, headers=CORS, body="")
 
     def _answer_search(self, route):
+        if self.search_raw_body is not None:
+            return route.fulfill(status=self.search_status, headers=CORS,
+                                 content_type="application/json", body=self.search_raw_body)
         return route.fulfill(
             status=self.search_status, headers=CORS, content_type="application/json",
             body=json.dumps(self.search_body),
@@ -223,8 +230,9 @@ def test_percentages_convert_squared_l2_not_cosine(make_page):
     search(page)
 
     expect(page.locator(".card")).to_have_count(5)
+    # es-CO formatting: decimal comma.
     assert page.locator(".card__pct").all_inner_texts() == [
-        "100.0%", "75.0%", "50.0%", "17.2%", "0.0%",
+        "100,0%", "75,0%", "50,0%", "17,2%", "0,0%",
     ]
 
 
@@ -251,10 +259,10 @@ def test_first_result_is_marked_closest(make_page):
     expect(cards).to_have_count(2)
     expect(cards.nth(0)).to_have_class(re.compile(r"\bcard--top\b"))
     expect(cards.nth(1)).not_to_have_class(re.compile(r"\bcard--top\b"))
-    assert page.locator(".card__label").all_inner_texts() == ["CLOSEST", "MATCH"]
+    assert page.locator(".card__label").all_inner_texts() == ["MÁS SIMILAR", "CANDIDATO"]
 
 
-@pytest.mark.parametrize("count,label", [(1, "1 match"), (3, "3 matches")])
+@pytest.mark.parametrize("count,label", [(1, "1 resultado"), (3, "3 resultados")])
 def test_result_count_is_pluralised(make_page, count, label):
     page, api, url = make_page()
     api.search_body = {"matches": [match(f"{i}.jpg", 0.2) for i in range(count)]}
@@ -263,6 +271,272 @@ def test_result_count_is_pluralised(make_page, count, label):
     search(page)
 
     expect(page.locator("#results-count")).to_have_text(label)
+
+
+# ─── F20: untrusted text renders as text ─────────────────────────────────────
+#
+# Filenames, image URLs and API error messages all originate outside the page.
+# Today they come from a committed index and fixed server strings, but M1/M3 let
+# people upload files with names they choose — at which point string-built HTML
+# becomes cross-site scripting. Each test below plants a payload that would run
+# script or add attributes if it were parsed as HTML.
+
+PAYLOAD_TAG = "<img src=x onerror=window.__pwned=1>"
+
+
+def _event_handler_attributes(page):
+    """Every on* attribute anywhere in the results. Legitimate rendering adds none."""
+    return page.eval_on_selector_all(
+        "#results-list *",
+        "els => els.flatMap(e => e.getAttributeNames().filter(n => n.startsWith('on')))",
+    )
+
+
+def _pwned(page):
+    page.wait_for_timeout(600)          # give an injected onerror time to fire
+    return page.evaluate("window.__pwned !== undefined")
+
+
+def test_filename_containing_html_renders_as_text(make_page):
+    page, api, url = make_page()
+    filename = f"{PAYLOAD_TAG}.jpg"
+    api.search_body = {"matches": [match(filename, 0.2)]}
+    page.goto(url)
+    choose_file(page)
+    search(page)
+
+    expect(page.locator(".card")).to_have_count(1)
+    expect(page.locator(".card__name")).to_have_text(filename)
+    assert page.locator(".card img").count() == 1, "the payload must not become a second <img>"
+    assert _event_handler_attributes(page) == []
+    assert not _pwned(page)
+
+
+def test_quotes_in_a_filename_cannot_break_out_of_attributes(make_page):
+    page, api, url = make_page()
+    filename = 'x" onmouseover="window.__pwned=1" data-x="y.jpg'
+    api.search_body = {"matches": [match(filename, 0.2)]}
+    page.goto(url)
+    choose_file(page)
+    search(page)
+
+    expect(page.locator(".card")).to_have_count(1)
+    assert page.get_attribute(".card img", "alt") == filename
+    assert page.get_attribute(".card__name", "title") == filename
+    assert _event_handler_attributes(page) == []
+    page.hover(".card__name")
+    page.hover(".card__plate")
+    assert not _pwned(page)
+
+
+def test_image_url_cannot_break_out_of_src(make_page):
+    page, api, url = make_page()
+    api.search_body = {"matches": [{
+        "filename": "a.jpg", "id": "a", "distance": 0.2,
+        "imageUrl": '/images/a.jpg" onerror="window.__pwned=1',
+    }]}
+    page.goto(url)
+    choose_file(page)
+    search(page)
+
+    expect(page.locator(".card")).to_have_count(1)
+    assert _event_handler_attributes(page) == []
+    assert not _pwned(page)
+
+
+def test_api_error_detail_containing_html_renders_as_text(make_page):
+    page, api, url = make_page()
+    detail = f'<b id="injected">bad</b> {PAYLOAD_TAG}'
+    api.search_status = 400
+    api.search_body = {"detail": detail}
+    page.goto(url)
+    choose_file(page)
+    search(page)
+
+    expect(page.locator(".results__message--error")).to_have_text(detail)
+    assert page.locator("#injected").count() == 0
+    assert page.locator("#results-list img").count() == 0
+    assert not _pwned(page)
+
+
+def test_script_never_builds_html_from_strings():
+    """The behavioural tests above prove today's payloads are harmless. This guards
+    the code paths they do not reach yet: F23 puts owner names and farms into these
+    same cards, and the easy mistake is a template literal assigned to innerHTML.
+    Use textContent, DOM properties or setAttribute instead."""
+    source = (FRONTEND / "script.js").read_text()
+    code = "\n".join(
+        line for line in source.splitlines() if not line.lstrip().startswith("//")
+    )
+    for sink in ("innerHTML", "outerHTML", "insertAdjacentHTML", "document.write"):
+        assert sink not in code, f"script.js uses {sink}; build nodes instead"
+
+
+# ─── F21: the interface is in Spanish ───────────────────────────────────────
+#
+# ICA's staff read this. Every string a user can see — or a screen reader can
+# announce — must be Spanish in every state the page can reach, not just the
+# landing view. Checked by hunting for the English copy it replaced.
+
+ENGLISH_COPY = [
+    r"Cattle Brand Search", r"Switch between light and dark", r"Vector image search",
+    r"Find the brand", r"behind the iron", r"Drop in a cattle brand", r"Drop an image",
+    r"browse your files", r"Search settings", r"Number of matches", r"Find matches",
+    r"high-contrast shape", r"Connecting to the registry", r"\bResults\b",
+    r"will appear here", r"image similarity over", r"Registry ready", r"brands indexed",
+    r"Registry asleep", r"Searching the registry", r"Waking the server", r"\belapsed\b",
+    r"stays fast", r"not an image file", r"Choose an image", r"\bClosest\b", r"\bMatch\b",
+    r"\bmatch(es)?\b", r"Image unavailable", r"No matches found", r"Request rejected",
+    r"endpoints failed", r"Try a JPG", r"Unexpected token", r"Failed to fetch",
+]
+
+
+def _all_user_text(page):
+    """Visible text, the document title, and every aria-label."""
+    return page.evaluate("""() => [
+        document.title,
+        document.body.innerText,
+        ...[...document.querySelectorAll('[aria-label]')].map(e => e.getAttribute('aria-label')),
+    ].join('\\n')""")
+
+
+def _assert_spanish(page, state):
+    text = _all_user_text(page)
+    leftovers = [p for p in ENGLISH_COPY if re.search(p, text)]
+    assert not leftovers, f"English left in state '{state}': {leftovers}"
+    assert "Ã" not in text and "�" not in text, f"mojibake in state '{state}'"
+
+
+def _state_waking(page, api):
+    api.health_ok = False
+    api.hold_search = True
+
+
+def _state_results(page, api):
+    api.search_body = {"matches": [match("a.jpg", 0.1), match("b.jpg", 0.7)]}
+
+
+def _state_image_unavailable(page, api):
+    api.images_ok = False
+
+
+def _state_no_matches(page, api):
+    api.search_body = {"matches": []}
+
+
+def _state_all_endpoints_down(page, api):
+    api.local_reachable = False
+    api.prod_reachable = False
+
+
+def _state_unreadable_response(page, api):
+    api.search_raw_body = "<html>not json</html>"
+
+
+def _state_rejection_without_text(page, api):
+    api.search_status = 422
+    api.search_body = {"detail": [{"loc": ["body", "file"], "msg": "Field required"}]}
+
+
+SEARCH_STATES = {
+    "results": (_state_results, lambda page: expect(page.locator(".card")).to_have_count(2)),
+    "image unavailable": (_state_image_unavailable,
+                          lambda page: expect(page.locator(".card__missing")).to_have_count(1)),
+    # The in-progress "Buscando…" message shares the .results__message class, so
+    # waiting for that class alone checks the wrong message. A finished message is
+    # the only one without the elapsed-time <small>.
+    "no matches": (_state_no_matches, lambda page: page.wait_for_function(
+        """() => { const m = document.querySelector('#results-list .results__message');
+                   return m && !m.querySelector('small'); }""")),
+    "all endpoints down": (_state_all_endpoints_down,
+                           lambda page: expect(page.locator(".results__message--error")).to_be_visible()),
+    "unreadable response": (_state_unreadable_response,
+                            lambda page: expect(page.locator(".results__message--error")).to_be_visible()),
+    "rejection without text": (_state_rejection_without_text,
+                               lambda page: expect(page.locator(".results__message--error")).to_be_visible()),
+    "waking": (_state_waking,
+               lambda page: expect(page.locator(".results__message small")).to_be_visible()),
+}
+
+
+def test_document_language_is_colombian_spanish(make_page):
+    page, api, url = make_page()
+    page.goto(url)
+    assert page.get_attribute("html", "lang") == "es-CO"
+
+
+@pytest.mark.parametrize("state,dot", [("registry ready", "ready"), ("registry asleep", "down")])
+def test_page_without_a_search_is_spanish(make_page, state, dot):
+    page, api, url = make_page()
+    api.health_ok = dot == "ready"
+    page.goto(url)
+    expect(page.locator("#api-dot")).to_have_attribute("data-state", dot)
+    _assert_spanish(page, state)
+
+
+@pytest.mark.parametrize("state", list(SEARCH_STATES))
+def test_every_search_outcome_is_spanish(make_page, state):
+    configure, settled = SEARCH_STATES[state]
+    page, api, url = make_page()
+    configure(page, api)
+    page.goto(url)
+    choose_file(page)
+    search(page)
+    settled(page)
+    _assert_spanish(page, state)
+
+
+@pytest.mark.parametrize("state", ["no file", "not an image"])
+def test_every_input_error_is_spanish(make_page, state):
+    page, api, url = make_page()
+    page.goto(url)
+    if state == "no file":
+        search(page)
+    else:
+        drop(page, "notes.txt", "text/plain", b"not an image")
+    expect(page.locator(".results__message--error")).to_be_visible()
+    _assert_spanish(page, state)
+
+
+def test_unexpected_failures_do_not_leak_browser_english(make_page):
+    """A response that is not JSON makes the browser throw its own English message
+    ('Unexpected token…'). The user must see a Spanish sentence instead."""
+    page, api, url = make_page()
+    api.search_raw_body = "<html>not json</html>"
+    page.goto(url)
+    choose_file(page)
+    search(page)
+    expect(page.locator(".results__message--error")).to_have_text(
+        "No se pudo completar la búsqueda. Intente de nuevo."
+    )
+
+
+def test_rejection_without_a_readable_message_falls_back_to_spanish(make_page):
+    """FastAPI's own validation errors carry a list, not a sentence. Showing it
+    would print '[object Object]'."""
+    page, api, url = make_page()
+    api.search_status = 422
+    api.search_body = {"detail": [{"loc": ["body", "file"], "msg": "Field required"}]}
+    page.goto(url)
+    choose_file(page)
+    search(page)
+    expect(page.locator(".results__message--error")).to_have_text(
+        "La solicitud fue rechazada (422)."
+    )
+
+
+def test_accented_text_renders_correctly(make_page):
+    page, api, url = make_page()
+    api.search_body = {"matches": [match("a.jpg", 0.1)]}
+    page.goto(url)
+    assert "Búsqueda" in page.title()
+    expect(page.locator(".hero__title")).to_contain_text("detrás")
+    choose_file(page)
+    search(page)
+    # to_have_text reads the DOM text; CSS uppercases it only when rendered, which
+    # test_first_result_is_marked_closest checks through inner_text.
+    expect(page.locator(".card__label")).to_have_text("Más similar")
+    assert page.inner_text(".card__label") == "MÁS SIMILAR"
 
 
 # ─── F7: which API the page talks to ─────────────────────────────────────────
@@ -313,7 +587,7 @@ def test_warm_up_fires_on_load_before_any_search(make_page):
     page, api, url = make_page()
     page.goto(url)
 
-    expect(page.locator("#api-status")).to_have_text("Registry ready · 78 brands indexed")
+    expect(page.locator("#api-status")).to_have_text("Registro listo · 78 hierros registrados")
     expect(page.locator("#api-dot")).to_have_attribute("data-state", "ready")
     assert api.requests[0] == ("GET", f"{LOCAL_API}/")
     assert not api.urls(f"{LOCAL_API}/search"), "warm-up must not need a search to happen"
@@ -325,7 +599,7 @@ def test_unreachable_api_is_reported_as_asleep(make_page):
     page.goto(url)
 
     expect(page.locator("#api-status")).to_have_text(
-        "Registry asleep — the first search will wake it"
+        "Registro en reposo — la primera búsqueda lo activará"
     )
     expect(page.locator("#api-dot")).to_have_attribute("data-state", "down")
 
@@ -339,7 +613,7 @@ def test_cold_search_shows_a_ticking_wake_message_that_stops(make_page):
     search(page)
 
     message = page.locator("#results-list .results__message")
-    expect(message).to_contain_text("Waking the server")
+    expect(message).to_contain_text("Activando el servidor")
     first = message.inner_text()
     page.wait_for_timeout(2200)
     assert message.inner_text() != first, "the elapsed counter should be ticking"
@@ -351,7 +625,7 @@ def test_cold_search_shows_a_ticking_wake_message_that_stops(make_page):
     settled = page.inner_text("#results-list")
     page.wait_for_timeout(1500)
     assert page.inner_text("#results-list") == settled
-    assert "Waking" not in settled
+    assert "Activando" not in settled
 
 
 # ─── error surfacing ─────────────────────────────────────────────────────────
@@ -362,13 +636,13 @@ def test_api_rejection_shows_the_apis_own_message(make_page):
     flattened into a generic connection failure."""
     page, api, url = make_page()
     api.search_status = 400
-    api.search_body = {"detail": "That file could not be read as an image. Try a JPG or PNG."}
+    api.search_body = {"detail": "No se pudo leer el archivo como imagen. Use un JPG o PNG."}
     page.goto(url)
     choose_file(page)
     search(page)
 
     error = page.locator(".results__message--error")
-    expect(error).to_have_text("That file could not be read as an image. Try a JPG or PNG.")
+    expect(error).to_have_text("No se pudo leer el archivo como imagen. Use un JPG o PNG.")
     assert not api.urls(f"{PROD_API}/search"), "a 4xx is an answer, not a reason to retry elsewhere"
 
 
@@ -380,7 +654,9 @@ def test_all_endpoints_down_is_reported(make_page):
     choose_file(page)
     search(page)
 
-    expect(page.locator(".results__message--error")).to_have_text("All API endpoints failed")
+    expect(page.locator(".results__message--error")).to_have_text(
+        "No fue posible conectar con el servidor. Intente de nuevo en unos minutos."
+    )
     assert api.urls(f"{LOCAL_API}/search") and api.urls(f"{PROD_API}/search"), \
         "both endpoints should have been tried before giving up"
 
@@ -390,7 +666,7 @@ def test_submitting_without_a_file_prompts_instead_of_calling_the_api(make_page)
     page.goto(url)
     search(page)      # no dependency on warm-up: click() already waits for the page
 
-    expect(page.locator(".results__message--error")).to_contain_text("Choose an image first")
+    expect(page.locator(".results__message--error")).to_contain_text("Primero elija una imagen")
     assert not api.urls(f"{LOCAL_API}/search")
 
 
@@ -493,7 +769,7 @@ def test_dropping_a_non_image_is_rejected(make_page):
     drop(page, "notes.txt", "text/plain", b"not an image")
 
     expect(page.locator(".results__message--error")).to_have_text(
-        "That is not an image file. Try a JPG or PNG."
+        "Ese archivo no es una imagen. Use un JPG o PNG."
     )
     expect(page.locator("#drop-zone")).not_to_have_class(re.compile(r"\bhas-image\b"))
     assert page.evaluate("document.getElementById('image-input').files.length") == 0

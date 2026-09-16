@@ -106,7 +106,7 @@ def test_unreadable_upload_is_a_client_error(client, name, payload):
         "/search", files={"file": ("x.jpg", io.BytesIO(payload), "image/jpeg")}
     )
     assert resp.status_code == 400, name
-    assert resp.json()["detail"] == "That file could not be read as an image. Try a JPG or PNG."
+    assert resp.json()["detail"] == "No se pudo leer el archivo como imagen. Use un JPG o PNG."
 
 
 def test_truncated_upload_is_a_client_error(client):
@@ -114,7 +114,7 @@ def test_truncated_upload_is_a_client_error(client):
         "/search", files={"file": ("cut.jpg", io.BytesIO(_truncated_jpeg()), "image/jpeg")}
     )
     assert resp.status_code == 400
-    assert resp.json()["detail"] == "That image file appears to be damaged or incomplete."
+    assert resp.json()["detail"] == "La imagen parece estar dañada o incompleta."
 
 
 @pytest.mark.parametrize(
@@ -159,7 +159,7 @@ def test_a_genuine_server_fault_still_logs_a_traceback(
         )
 
     assert resp.status_code == 500
-    assert resp.json()["detail"] == "Could not process the uploaded image."
+    assert resp.json()["detail"] == "No se pudo procesar la imagen enviada."
     assert "vector store exploded" not in resp.text        # not leaked to the client
     assert "vector store exploded" in caplog.text          # but kept in the log
     assert "Traceback" in caplog.text
